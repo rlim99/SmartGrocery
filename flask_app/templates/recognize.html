@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recognition Result</title>
+</head>
+<body>
+    <h1>Recognition Results</h1>
+    {% if result %}
+        <h2>Image: {{ result.image_name }}</h2>
+        
+        {% if result.barcodes is mapping %}  {# Check if barcodes is a dictionary #}
+            <ul>
+                <li>
+                    <strong>Barcode:</strong> {{ result.barcodes.barcode }}<br>
+                    <strong>Name:</strong> {{ result.barcodes.name }}<br>
+                    <strong>Brand:</strong> {{ result.barcodes.brand }}<br>
+                    <strong>Category:</strong> {{ result.barcodes.category }}<br>
+                    <strong>Price:</strong> {{ result.barcodes.price }}
+                </li>
+            </ul>
+        
+        {% elif result.barcodes is iterable %}  {# Check if barcodes is a list #}
+            <ul>
+                {% for item in result.barcodes %}
+                    <li>
+                        <strong>Barcode:</strong> {{ item.barcode }}<br>
+                        <strong>Name:</strong> {{ item.name }}<br>
+                        <strong>Brand:</strong> {{ item.brand }}<br>
+                        <strong>Category:</strong> {{ item.category }}<br>
+                        <strong>Price:</strong> {{ item.price }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No barcode found.</p>
+        {% endif %}
+        
+    {% else %}
+        <p>No results found.</p>
+    {% endif %}
+
+    <button onclick="window.location.href='/'">Back to Main Menu</button>
+</body>
+</html>

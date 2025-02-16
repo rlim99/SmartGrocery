@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recognition Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #007BFF;
+        }
+    </style>
+</head>
+<body>
+    <h1>Recognition Results</h1>
+    
+    <h2>Barcode Results</h2>
+    <ul>
+        {% if barcode_results %}
+            {% for result in barcode_results %}
+                <li>
+                    <strong>Barcode:</strong> {{ result.barcode }}<br>
+                    <strong>Name:</strong> {{ result.name }}<br>
+                    <strong>Brand:</strong> {{ result.brand }}<br>
+                    <strong>Category:</strong> {{ result.category }}<br>
+                    <strong>Price:</strong> {{ result.price }}<br>
+                </li>
+            {% endfor %}
+        {% else %}
+            <li>No barcodes found in the image.</li>
+        {% endif %}
+    </ul>
+    
+    <h2>Item Recognition Results</h2>
+    <ul>
+        {% if item_results %}
+            {% for item in item_results %}
+                <li>
+                    <strong>Name:</strong> {{ item.name }}<br>
+                    <strong>Brand:</strong> {{ item.brand }}<br>
+                    <strong>Category:</strong> {{ item.category }}<br>
+                    <strong>Price:</strong> {{ item.price }}<br>
+                </li>
+            {% endfor %}
+        {% else %}
+            <li>No items recognized without a barcode.</li>
+        {% endif %}
+    </ul>
+    
+    <a href="{{ url_for('index') }}">Back to Upload</a>
+</body>
+</html>
