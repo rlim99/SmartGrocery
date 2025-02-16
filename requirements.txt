@@ -1,0 +1,3 @@
+Flask==2.2.3
+gunicorn==21.2.0
+# Include any other dependencies your barcode_functions and image_processing modules require
