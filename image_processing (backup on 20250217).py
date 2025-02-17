@@ -1,10 +1,8 @@
 import cv2
 import json
 import numpy as np
-#import mysql.connector
-import pymysql
-#from mysql.connector import Error
-from pymysql import Error
+import mysql.connector
+from mysql.connector import Error
 from pyzbar.pyzbar import decode
 import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
@@ -39,7 +37,7 @@ general_model = ResNet50(weights='imagenet')
 def get_db_connection():
     """Establish a connection to the MySQL database."""
     try:
-        return pymysql.connector.connect(
+        return mysql.connector.connect(
             host='localhost',
             user='root',
             password='a20031021',
