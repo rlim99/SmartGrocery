@@ -3,7 +3,6 @@ import json
 import numpy as np
 import pymysql
 from pymysql import Error
-from pyzbar.pyzbar import decode
 import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
@@ -12,7 +11,6 @@ import logging
 from flask import Flask
 from PIL import Image
 import matplotlib.pyplot as plt
-import cv2 as cv
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -88,7 +86,7 @@ def filter_contours(contours, min_area=1000):
     filtered_contours = []
 
     for contour in contours:
-        area = cv.contourArea(contour)
+        area = cv2.contourArea(contour)
         if area < min_area:
             continue  # Skip contours that do not meet area criteria
 
@@ -99,35 +97,35 @@ def filter_contours(contours, min_area=1000):
 def count_objects(original):
     """Count objects in the image using advanced preprocessing and classify them by type."""
     # Convert image to grayscale
-    gray_im = cv.cvtColor(original, cv.COLOR_BGR2GRAY)
+    gray_im = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
 
     # Apply gamma correction
     gray_correct = np.array(255 * (gray_im / 255) ** 1.2, dtype='uint8')
 
     # Apply histogram equalization
-    gray_equ = cv.equalizeHist(gray_correct)
+    gray_equ = cv2.equalizeHist(gray_correct)
 
     # Local adaptive thresholding
-    thresh = cv.adaptiveThreshold(gray_equ, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 255, 19)
-    thresh = cv.bitwise_not(thresh)
+    thresh = cv2.adaptiveThreshold(gray_equ, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 255, 19)
+    thresh = cv2.bitwise_not(thresh)
 
     # Dilation and erosion to clean up the image
     kernel = np.ones((5, 5), np.uint8)
-    img_dilation = cv.dilate(thresh, kernel, iterations=1)
-    img_erode = cv.erode(img_dilation, kernel, iterations=1)
-    img_erode = cv.medianBlur(img_erode, 11)
+    img_dilation = cv2.dilate(thresh, kernel, iterations=1)
+    img_erode = cv2.erode(img_dilation, kernel, iterations=1)
+    img_erode = cv2.medianBlur(img_erode, 11)
 
     # Find contours
-    contours, _ = cv.findContours(img_erode, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(img_erode, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # Filter contours
     filtered_contours = filter_contours(contours)
 
     # Visualize contours on the original image
     output_image = original.copy()  # Create a copy of the original image
-    cv.drawContours(output_image, filtered_contours, -1, (0, 255, 0), 2)  # Draw filtered contours in green
+    cv2.drawContours(output_image, filtered_contours, -1, (0, 255, 0), 2)  # Draw filtered contours in green
 
-    plt.imshow(cv.cvtColor(output_image, cv.COLOR_BGR2RGB))
+    plt.imshow(cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB))
     plt.title('Filtered Contours')
     plt.show()  # Display the image with contours
 
@@ -137,10 +135,10 @@ def count_objects(original):
     # Iterate through each filtered contour
     for contour in filtered_contours:
         mask = np.zeros(original.shape[:2], dtype=np.uint8)
-        cv.drawContours(mask, [contour], -1, 255, thickness=cv.FILLED)
+        cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
         
         # Crop the object from the original image
-        x, y, w, h = cv.boundingRect(contour)
+        x, y, w, h = cv2.boundingRect(contour)
         cropped_image = original[y:y+h, x:x+w]
 
         # Classify the type of object
@@ -172,16 +170,13 @@ def classify_object(cropped_image):
     app.logger.debug(f"Starting classification for image of shape: {cropped_image.shape}")
 
     # Resize the cropped image to the required shape for the model
-    cropped_image_resized = cv.resize(cropped_image, (224, 224))  # Resize to 224x224
+    cropped_image_resized = cv2.resize(cropped_image, (224, 224))  # Resize to 224x224
 
     # Try classifying as fruit first
     fruit_predictions = classify_fruit(cropped_image_resized)
     
     # Log the fruit predictions
     app.logger.debug(f"Fruit predictions: {fruit_predictions}")
-
-    # Log the label mapping
-    #app.logger.debug(f"Label mapping: {labels}")  # Ensure 'labels' is defined in the scope
 
     # Check if the prediction confidence is high enough (example threshold)
     if np.max(fruit_predictions) > 0.5:  # Adjust threshold as needed
@@ -212,14 +207,20 @@ def recognize_barcode(image_path):
         app.logger.error("Error: Could not read the image.")
         return [], None
 
-    # Decode the barcode(s) in the image
-    barcodes = decode(image)
-    results = []
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Process detected barcodes
-    for barcode in barcodes:
-        barcode_data = barcode.data.decode('utf-8')
-        app.logger.info(f"Decoded barcode: {barcode_data}")
+    # Initialize the barcode detector for QR codes
+    barcode_detector = cv2.QRCodeDetector()
+
+    # Detect QR codes
+    data, points, _ = barcode_detector(gray)
+
+    results = []
+    if points is not None:
+        # Decode QR code data
+        barcode_data = data.decode('utf-8')
+        app.logger.info(f"Decoded QR code: {barcode_data}")
         product_info = lookup_product_by_barcode(barcode_data)
 
         if product_info:
@@ -232,7 +233,7 @@ def recognize_barcode(image_path):
                 'quantity': 0,  # Placeholder for quantity
             })
         else:
-            app.logger.warning(f"Product not found for barcode: {barcode_data}")
+            app.logger.warning(f"Product not found for QR code: {barcode_data}")
             results.append({
                 'barcode': barcode_data,
                 'name': 'Not found',
@@ -242,7 +243,12 @@ def recognize_barcode(image_path):
                 'quantity': 0,  # Placeholder for quantity
             })
 
-    return results, image  # Return results along with the original image for further processing
+    # For 1D barcodes, use a placeholder logic (you may need to implement actual detection)
+    # Here you can implement additional logic to detect and decode 1D barcodes
+    # For now, we will just log that we are looking for 1D barcodes
+    app.logger.info("Looking for 1D barcodes (implement logic here).")
+
+    return results, image  # Return results along with the original image
 
 def recognize_item_without_barcode(image_path, object_counts):
     """Use image recognition to identify an item without a barcode."""
