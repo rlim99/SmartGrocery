@@ -11,5 +11,8 @@
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ]
+  ],
+  "scripts": {
+    "postinstall": "pip install tensorflow-cpu"
+  }
 }
