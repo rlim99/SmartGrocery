@@ -1,9 +1,20 @@
+import os
+import subprocess
+import sys
 import cv2
 import json
 import numpy as np
 import pymysql
 from pymysql import Error
-import tensorflow as tf
+
+# Check if TensorFlow is installed
+try:
+    import tensorflow as tf
+except ImportError:
+    # Install TensorFlow if not installed
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'tensorflow-cpu==2.18.0'])
+    import tensorflow as tf
+#import tensorflow as tf
 from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from tensorflow.keras.preprocessing import image as keras_image
