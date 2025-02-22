@@ -12,7 +12,7 @@
       "dest": "app.py"
     }
   ],
-  "scripts": {
-    "postinstall": "pip install tensorflow-cpu"
+  "hooks": {
+    "prebuild": "pip install tensorflow-cpu"
   }
 }
