@@ -4,11 +4,10 @@ import numpy as np
 import mysql.connector
 from mysql.connector import Error
 from pyzbar.pyzbar import decode
-import tensorflow as tf
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
-from tensorflow.keras.preprocessing import image as keras_image
+import torch
+from torchvision import models, transforms
 import logging
+from PIL import Image
 
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -18,7 +17,16 @@ with open('c:/IERG4998/imagenet_labels.json') as f:
     labels = json.load(f)
 
 # Load the trained model for image classification
-model = ResNet50(weights='imagenet')  # Load the ResNet50 model with pre-trained ImageNet weights
+model = models.resnet50(weights='IMAGENET1K_V1')  # Load ResNet50 with pre-trained ImageNet weights
+model.eval()  # Set the model to evaluation mode
+
+# Define preprocessing transformations
+preprocess = transforms.Compose([
+    transforms.Resize(256),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
 
 def get_db_connection():
     """Establish a connection to the MySQL database."""
@@ -116,17 +124,16 @@ def recognize_item_without_barcode(image_path):
     logging.info("Starting item recognition without barcode.")
     
     try:
-        img = keras_image.load_img(image_path, target_size=(224, 224))  # Resize for ResNet50
-        input_array = keras_image.img_to_array(img)  # Convert to array
-        input_array = np.expand_dims(input_array, axis=0)  # Create a mini-batch
-        input_array = preprocess_input(input_array)  # Preprocess for ResNet50
+        img = Image.open(image_path).convert("RGB")  # Load and convert image
+        img = preprocess(img).unsqueeze(0)  # Apply preprocessing and create a mini-batch
 
         # Make prediction
-        predictions = model.predict(input_array)
+        with torch.no_grad():
+            predictions = model(img)
         
-        # Decode predictions
-        decoded_predictions = decode_predictions(predictions, top=3)[0]  # Get top 3 predictions
-        predicted_label = decoded_predictions[0][1]  # Get the label of the highest prediction
+        # Get the predicted class label
+        predicted_label_index = torch.argmax(predictions).item()
+        predicted_label = labels[predicted_label_index]
 
         # Lookup product information by name
         category_info = lookup_product_by_name(predicted_label)
